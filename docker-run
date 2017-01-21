@@ -70,7 +70,7 @@ elif [ $1 == "all" ]; then
 	CONFIGS=($(ls $BASEPATH | grep \\.docker\$))
 	
 	for config in "${CONFIGS[@]}"; do
-		runConfig $config
+		runConfig $BASEPATH/$config
 	done
 elif [ -f $1 ]; then
 	runConfig $1
