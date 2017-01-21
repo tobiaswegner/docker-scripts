@@ -1,0 +1,77 @@
+#!/bin/bash
+#
+# Copyright (c) 2016 Tobias Wegner.
+# 
+# This program is free software: you can redistribute it and/or modify  
+# it under the terms of the GNU General Public License as published by  
+# the Free Software Foundation, version 3.
+#
+# This program is distributed in the hope that it will be useful, but 
+# WITHOUT ANY WARRANTY; without even the implied warranty of 
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License 
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+
+function printUsage {
+	echo -e ""
+	echo -e "Usage:"
+	echo -e "docker-run all"
+	echo -e "\tStarts all available docker container"
+	echo -e "docker-run <configfile>"
+	echo -e "\tStarts specific docker container"
+	echo -e ""
+}
+
+function runConfig {
+	. $1
+	CMDLINE="docker run -d"
+
+	if [ ! -z "$PORTS" ]; then
+		for port in "${PORTS[@]}"; do
+			CMDLINE="$CMDLINE -p $port"
+		done
+	fi
+
+	if [ ! -z "$VOLUMES" ]; then
+		for volume in "${VOLUMES[@]}"; do
+			CMDLINE="$CMDLINE -v $volume"
+		done
+	fi
+
+		CMDLINE="$CMDLINE $IMAGE"
+
+	if [ ! -z "$COMMAND" ]; then
+		$CMDLINE $COMMAND
+	else
+		$CMDLINE
+	fi
+}
+
+if [ $# -lt 1 ]; then
+	printUsage
+
+	exit
+fi
+
+if [ $1 == "--help" ]; then
+	printUsage
+	
+	exit
+elif [ $1 == "all" ]; then
+	BASEPATH=""
+
+	if [ $# -gt 1 ]; then
+		BASEPATH="$2/"
+	fi
+
+	CONFIGS=($(ls $BASEPATH | grep \\.docker\$))
+	
+	for config in "${CONFIGS[@]}"; do
+		runConfig $config
+	done
+elif [ -f $1 ]; then
+	runConfig $1
+fi

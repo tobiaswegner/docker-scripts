@@ -1,0 +1,86 @@
+#!/bin/bash
+#
+# Copyright (c) 2016 Tobias Wegner.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, version 3.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+
+function printUsage {
+	echo -e ""
+	echo -e "Usage:"
+	echo -e "docker-update all"
+	echo -e "\tUpdates all available docker container"
+	echo -e "docker-update <configfile>"
+	echo -e "\tUpdates specific docker container"
+	echo -e ""
+}
+
+function updateConfig {
+	. $1
+
+	echo "Update container $IMAGE"
+
+	OLD_IMAGE_ID=$(docker images | grep $IMAGE | grep latest | sed -n 1p | awk '{ print $3; }')
+	
+	echo "Old image: $OLD_IMAGE_ID"
+	
+	docker pull $IMAGE
+	
+	NEW_IMAGE_ID=$(docker images | grep $IMAGE | grep latest | sed -n 1p | awk '{ print $3; }')
+	
+	echo "New image: $NEW_IMAGE_ID"
+	
+	if [ "$OLD_IMAGE_ID" == "$NEW_IMAGE_ID" ]; then
+		echo "IDs are identical, no update needed"
+		
+		return 0
+	else
+		echo "IDs are different, restart container"
+	          
+		CONTAINER=$(docker ps | grep $IMAGE:latest | awk '{ print $1; }')
+	              
+		docker stop $CONTAINER
+	                  
+		docker-run $1
+
+		return 0
+	fi
+	                            
+	return 0
+}
+
+if [ $# -lt 1 ]; then
+	printUsage
+
+	exit
+fi
+
+if [ $1 == "--help" ]; then
+	printUsage
+	
+	exit
+elif [ $1 == "all" ]; then
+	BASEPATH=""
+	
+	if [ $# -gt 1 ]; then
+		BASEPATH="$2/"
+	fi
+	
+	CONFIGS=($(ls $BASEPATH | grep \\.docker\$))
+	
+	for config in "${CONFIGS[@]}"; do
+		updateConfig $config
+	done
+elif [ -f $1 ]; then
+	updateConfig $1
+fi
