@@ -1,0 +1,64 @@
+#!/bin/bash
+
+# load default configuration from ~/.docker-diff
+. ~/.docker-diff
+
+if [ $# -lt 1 ]; then
+  echo "Usage: docker-diff.sh <name of docker image> [<name of docker image to compare with> [<tag of docker image> [<tag of docker image to compare with>]]]"
+  echo "If you omit the second image name, the image is compared with the server version"
+  echo "If you omit the tags, then 'latest' is assumed"
+  
+  exit 0
+fi
+
+if [ -z "$REGISTRY" ]; then
+  echo "No registry configured, setting to empty"
+  
+  REGISTRY=""
+fi
+
+if [ -z "$DOCKER_DIR" ]; then
+  echo "No docker dir configured, using /var/lib/docker"
+
+  DOCKER_DIR=/var/lib/docker
+fi
+
+NAME_A=$1
+
+if [ -z "$2" ]; then
+  NAME_B=$REGISTRY/$NAME_A
+else
+  NAME_B=$2
+fi
+
+if [ -z "$3" ]; then
+  TAG_A="latest"
+else
+  TAG_A=$3
+fi
+
+if [ -z "$4" ]; then
+  TAG_B="latest"
+else
+  TAG_B=$4
+fi
+
+IMAGE_A=$(docker images | grep $NAME_A | grep $TAG_A | sed -n 1p | awk '{ print $3; }')
+IMAGE_B=$(docker images | grep $NAME_B | grep $TAG_B | sed -n 1p | awk '{ print $3; }')
+
+IMAGE_A=$(docker inspect $NAME_A:$TAG_A | grep $IMAGE_A | awk '{ print $2}' | sed -e "s/[\",]//g");
+IMAGE_B=$(docker inspect $NAME_B:$TAG_B | grep $IMAGE_B | awk '{ print $2}' | sed -e "s/[\",]//g");
+
+echo "Diffing image A $IMAGE_A with image B $IMAGE_B"
+
+diff -r --no-dereference $DOCKER_DIR/btrfs/subvolumes/$IMAGE_A $DOCKER_DIR/btrfs/subvolumes/$IMAGE_B
+
+RESULT=$?
+
+if [[ $RESULT != 0 ]]; then
+  echo "Images are different"
+else
+  echo "Images are identical"
+fi
+
+exit $RESULT
