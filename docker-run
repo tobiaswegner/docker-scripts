@@ -44,10 +44,10 @@ function runConfig {
 		CMDLINE="$CMDLINE $IMAGE"
 
 	if [ ! -z "$COMMAND" ]; then
-		$CMDLINE $COMMAND
-	else
-		$CMDLINE
+		CMDLINE="$CMDLINE $COMMAND"
 	fi
+
+	/bin/bash -c "$CMDLINE"
 }
 
 if [ $# -lt 1 ]; then
